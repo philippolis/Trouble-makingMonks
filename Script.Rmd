@@ -1,153 +1,44 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "Troble-making Monks"
+subtitle: |
+  <center> SSIM912 - Social Network Analysis </center>
+  <center> Final Essay </center>
+author: "Philipp Holz"
+date: "02 July 2021"
+output:
+  pdf_document:
+    toc: yes
+    number_sections: true
+fontsize: 12pt
+#bibliography: references.bib
+header-includes:
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
 ---
 
-```{r}
+```{r setup, message=FALSE, warning=FALSE, include=FALSE}
 library(network)
 library(sna)
 library(tidyr)
-library(stargazer)
-library(scales)
+library(igraph) # for converting adjacency matrix to network object and calculating weighted indegree
+library(stargazer) # for getting nice regression tables
+library(scales) # for getting alpha-function for edge color
+library(multiplex) # for loading DL-data
+library(intergraph) # for converting igraph object to sna network object
 
 setwd("~/Documents/GitHub/MonasteryNetwork")
 
+```
+
+```{r data, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
+# Load in the data
 sampson.paj <- read.paj("Sampson.paj")
-```
-
-```{r}
-# Visualise the dataset
-Sampson_T4.net <- sampson.paj$networks$Sampson_T4
-
-# Show names
-#Sampson_T4.net %v% "vertex.names"
-
-# Get edge values representing esteem
-like_value <- get.edge.value(Sampson_T4.net, attrname="Sampson_T4")
-
-edge_col <- vector()
-
-for (i in 1:length(like_value)){
-  if (like_value[i] == 1) {
-    edge_col[i] <- "darkgreen"
-  } else {
-    edge_col[i] <- "red"
-  }
-}
-
-# Get node values representing attendance to cloisterville
-attend_value <- sampson.paj$partitions$Sampson_cloisterville_T4
-
-node_col <- vector()
-
-for (i in 1:length(attend_value)){
-  if (attend_value[i] == 1) {
-    node_col[i] <- "white"
-  } else {
-    node_col[i] <- "grey"
-  }
-}
-
-# Plot with vertex colors along factions
-gplot(Sampson_T4.net,
-      displaylabels = T,
-      label.cex = 0.65,
-      arrowhead.cex = 0.5,
-      vertex.cex = 0.7,
-      vertex.col = node_col,
-      edge.col = edge_col)
-
-```
-
-We should be able to replicate the below analysis with the Sampson data. The regression formula should be something like:
-
-```{r}
-# Calculating centrality measures
-deg_total<-sna::degree(Sampson_T4.net,gmode="graph", cmode="freeman")
-deg_indeg<-sna::degree(Sampson_T4.net,gmode="digraph", cmode="indegree")
-deg_outdeg<-sna::degree(Sampson_T4.net,gmode="digraph", cmode="outdegree")
-
-bet<-sna::betweenness(Sampson_T4.net,gmode="digraph")
-
-clo<-sna::closeness(Sampson_T4.net,gmode="graph")
-
-# Calculate likeability
-
-### Get edgelist
-#edge_list <- sna::as.edgelist.sna(Sampson_T4.net)[1:33,1:2]
-#
-### merge with edge values
-#edge_list <- cbind(edge_list, get.edge.value(Sampson_T4.net, attrname="Sampson_T4"))
-#
-#colnames(edge_list) <- c("from", "to", "esteem")
-#
-#edge_list <- as.data.frame(edge_list)
-#
-### calculate esteem received
-#esteem_received_df <- edge_list %>% group_by(to) %>% summarise(total_esteem = sum(esteem))
-#
-### add nodes that have 0 in-degree
-#esteem_received_df <- rbind(esteem_received_df, c(9,NA), c(10,NA), c(11,NA), c(12,NA), c(14,NA), c(15,NA), c(16, NA)) %>% arrange(to)
-#
-#esteem_received <- esteem_received_df[,2]
-
-# some values are off, so lets enter esteem received manually
-esteem_received_manual <- c(4,-1,-1,-1,1,-1,0,1,0,0,0,0,0,0,0,0,0,0)
-
-# combine all
-df <- cbind(attend_value, deg_total, deg_indeg, deg_outdeg, bet, clo, esteem_received, esteem_received_manual)
-
-```
-
-```{r}
-# Run regression model
-# Running three logistic regression models with degree centrality,
-# closeness centrality and betweenness centrality as the predictor variables
-
-# models with correcting esteem
-glm_deg_total <- glm(attend_value ~ deg_total + esteem_received_manual, family = "binomial", data = df)
-# summary(glm_deg_total) # p-value 0.444
-
-glm_deg_indeg <- glm(attend_value ~ deg_indeg + esteem_received_manual, family = "binomial", data = df)
-# summary(glm_deg_indeg) # p-value 0.444
-
-glm_deg_outdeg <- glm(attend_value ~ deg_outdeg + esteem_received_manual, family = "binomial", data = df)
-# summary(glm_deg_outdeg) # p-value 0.995
-
-glm_bet <- glm(attend_value ~ bet + esteem_received_manual, family = "binomial", data = df)
-# summary(glm_bet) # p-value 0.338
-
-glm_clo <- glm(attend_value ~ clo + esteem_received_manual, family = "binomial", data = df)
-# summary(glm_clo) # p-value 0.748
-```
-
-```{r}
-# Then comparing the models
-
-## for printing in the pdf document, change type to "latex"
-stargazer(glm_deg_total, glm_deg_indeg, glm_deg_outdeg, glm_clo, glm_bet,
-          type="text",
-          covariate.labels=c("Total Degree Centrality", "Indegree Centrality",
-                             "Outdegree Centrality", "Closeness Centrality",
-                             "Betweenness Centrality", "Esteem"),
-          dep.var.labels = "Logit of having attended the minor seminary",
-          title = "Results")
-
-```
-
-Because we didn't get any significant results when testing whether we can predict the attendance of the minor seminary by looking at centrality and esteem in the network, we will try out whether the relationships in the network have stabilized over time.
-
-```{r}
-# Download the DL format data and edit vertex names to fit with naming convention of paj-files
-
-
-# Read in DL format data
-library(multiplex)
 
 sampson.dat <- read.dl("sampson.dat")
 
-detach("package:multiplex", unload=TRUE)
+```
 
+```{r nets, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Extract individual adjacency matrices
 SAMPLK1 <- sampson.dat[1:18,1:18,1]
 SAMPLK2 <- sampson.dat[1:18,1:18,2]
@@ -158,8 +49,6 @@ SAMPNIN <- sampson.dat[1:18,1:18,8]
 SAMPNPR <- sampson.dat[1:18,1:18,10]
 
 # Get the data into an igraph network object
-library(igraph)
-
 SAMPLK1_igraph <- graph.adjacency(as.matrix(SAMPLK1), mode = "directed", weighted = TRUE)
 SAMPLK2_igraph <- graph.adjacency(as.matrix(SAMPLK2), mode = "directed", weighted = TRUE)
 SAMPLK3_igraph <- graph.adjacency(as.matrix(SAMPLK3), mode = "directed", weighted = TRUE)
@@ -168,11 +57,7 @@ SAMPDES_igraph <- graph.adjacency(as.matrix(SAMPDES), mode = "directed", weighte
 SAMPNIN_igraph <- graph.adjacency(as.matrix(SAMPNIN), mode = "directed", weighted = TRUE)
 SAMPNPR_igraph <- graph.adjacency(as.matrix(SAMPNPR), mode = "directed", weighted = TRUE)
 
-detach("package:igraph", unload=TRUE)
-
 # Convert to network object
-library(intergraph)
-
 SAMPLK1_net <- asNetwork(SAMPLK1_igraph)
 SAMPLK2_net <- asNetwork(SAMPLK2_igraph)
 SAMPLK3_net <- asNetwork(SAMPLK3_igraph)
@@ -181,11 +66,11 @@ SAMPDES_net <- asNetwork(SAMPDES_igraph)
 SAMPNIN_net <- asNetwork(SAMPNIN_igraph)
 SAMPNPR_net <- asNetwork(SAMPNPR_igraph)
 
-detach("package:intergraph", unload=TRUE)
 ```
 
-```{r}
-# Include vertex attributes
+# Part 1
+```{r attr, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
+# Include vertex attributes from description
 
 # attendance to cloisterville
 attend_value <- c(1,1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0)
@@ -228,18 +113,20 @@ for (i in 1:length(expulsed_value)){
 
 ```
 
-```{r include=FALSE}
+```{r like_coords, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Get a good-looking layout
 like_coords <- gplot(SAMPLK3_net)
+
 ```
 
-
-```{r fig.height=12, fig.width=5}
+```{r like_viz, echo = FALSE, message = FALSE, warning = FALSE, include = TRUE, fig.height=12, fig.width=5, appendix = TRUE}
 # Visualise the networks
 par(mfrow = c(3,1))
 
 gplot(SAMPLK1_net,
       coord = like_coords,
+      usecurve = T,
+      edge.curve = 0.05,
       displaylabels = T,
       label.cex = 1,
       arrowhead.cex = 0.5,
@@ -251,6 +138,8 @@ gplot(SAMPLK1_net,
 
 gplot(SAMPLK2_net,
       coord = like_coords,
+      usecurve = T,
+      edge.curve = 0.05,
       displaylabels = T,
       label.cex = 1,
       arrowhead.cex = 0.5,
@@ -262,6 +151,8 @@ gplot(SAMPLK2_net,
 
 gplot(SAMPLK3_net,
       coord = like_coords,
+      usecurve = T,
+      edge.curve = 0.05,
       displaylabels = T,
       label.cex = 1,
       arrowhead.cex = 0.5,
@@ -270,48 +161,46 @@ gplot(SAMPLK3_net,
       edge.col = alpha("gray50", 0.5),
       edge.lwd = (SAMPLK3_net %e% "weight")*1.5,
       main = "Liking Time Point 3")
+
 ```
 
-```{r}
+Now, did the groups get more cohesive?
+
+- Graph-level centrality for each of the two subgraphs
+
+# Part 2
+
+```{r groups, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Split nodes into these two groups
 # 1 - group that remained, 0 - group that left
 group_value <- c(0,0,0,1,1,1,0,1,1,1,1,0,0,0,0,0,0,0)
 
-
-# Get node colors representing group membership
-group_col <- vector()
-
-for (i in 1:length(attend_value)){
-  if (group_value[i] == 1) {
-    group_col[i] <- "green"
-  } else {
-    group_col[i] <- "red"
-  }
-}
 ```
 
 
-```{r include=FALSE}
+```{r dislike_cords, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Get a good-looking layout
 dislike_coords <- gplot(SAMPNPR_net)
+
 ```
 
-```{r}
+```{r centrality, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Get weighted indegrees
-library(igraph)
-
 DLK_in <- strength(SAMPDLK_igraph, mode = "in", loops = TRUE, weights = E(SAMPDLK_igraph)$weight)
 DES_in <- strength(SAMPDES_igraph, mode = "in", loops = TRUE, weights = E(SAMPDES_igraph)$weight)
 NIN_in <- strength(SAMPNIN_igraph, mode = "in", loops = TRUE, weights = E(SAMPNIN_igraph)$weight)
 NPR_in <- strength(SAMPNPR_igraph, mode = "in", loops = TRUE, weights = E(SAMPNPR_igraph)$weight)
+
 ```
 
-
-```{r fig.height=12, fig.width=12}
+```{r dislike_viz, echo = FALSE, message = FALSE, warning = FALSE, include = TRUE, fig.height=12, fig.width=12, appendix = TRUE}
+# Visualise negative feeling networks
 par(mfrow = c(2,2))
 
 gplot(SAMPDLK_net,
       coord = dislike_coords,
+      usecurve = T,
+      edge.curve = 0.05,
       displaylabels = T,
       label.cex = 1,
       arrowhead.cex = 0.5,
@@ -324,6 +213,8 @@ gplot(SAMPDLK_net,
 
 gplot(SAMPDES_net,
       coord = dislike_coords,
+      usecurve = T,
+      edge.curve = 0.05,
       displaylabels = T,
       label.cex = 1,
       arrowhead.cex = 0.5,
@@ -336,6 +227,8 @@ gplot(SAMPDES_net,
 
 gplot(SAMPNIN_net,
       coord = dislike_coords,
+      usecurve = T,
+      edge.curve = 0.05,
       displaylabels = T,
       label.cex = 1,
       arrowhead.cex = 0.5,
@@ -348,6 +241,8 @@ gplot(SAMPNIN_net,
 
 gplot(SAMPNPR_net,
       coord = dislike_coords,
+      usecurve = T,
+      edge.curve = 0.05,
       displaylabels = T,
       label.cex = 1,
       arrowhead.cex = 0.5,
@@ -360,3 +255,35 @@ gplot(SAMPNPR_net,
 
 ```
 
+Now on to the regression analysis. We try to find out, whether attending the cloisterville seminar reduced the weighted in-degree in the negative sentiment networks. We have to correct for group membership, because it is likely that the two groups extended more negative feelings towards each other than among themselves. Together with the unequal sizes of these groups, this is likely to lead to a bias in more equal sentiment per actor extended towards the smaller of the two groups.
+
+```{r reg, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
+# Calculate centrality measures
+df <- as.data.frame(cbind(attend_value, DLK_in, DES_in, NIN_in, NPR_in))
+
+# Run regression model
+lm_DLK <- lm(DLK_in ~ attend_value + group_value, data = df)
+lm_DES <- lm(DES_in ~ attend_value + group_value, data = df)
+lm_NIN <- lm(NIN_in ~ attend_value + group_value, data = df)
+lm_NPR <- lm(NPR_in ~ attend_value + group_value, data = df)
+
+```
+
+```{r results, echo = FALSE, message = FALSE, warning = FALSE, include = TRUE, results='asis', appendix = TRUE}
+# Then comparing the models
+
+## for printing in the pdf document, change type to "latex"
+stargazer(lm_DLK, lm_DES, lm_NIN, lm_NPR,
+          type="latex",
+          covariate.labels=c("Attendance Cloisterville", "Group membership"),
+          dep.var.labels = c("Dislike,", "Disesteem,", "Neg. Influence,", "Blame"),
+          title = "Results",
+          column.sep.width = "10pt")
+
+# shows coefficients and standard errors, none of the results are significant at the p<0.1-level
+
+```
+
+# Code
+```{r, ref.label=knitr::all_labels(appendix == TRUE),echo = TRUE, eval=FALSE}
+```
