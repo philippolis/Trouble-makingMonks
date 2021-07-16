@@ -2,24 +2,27 @@
 title: "Troble-making Monks"
 subtitle: |
   <center> SSIM912 - Social Network Analysis </center>
-  <center> Final Essay </center>
-author: "Philipp Holz"
-date: "02 July 2021"
+author: "Philipp Holz, 16 July 2021"
 output:
   pdf_document:
     toc: yes
     number_sections: true
 fontsize: 12pt
-#bibliography: references.bib
+bibliography: references.bib
 header-includes:
   - \usepackage{float}
   - \floatplacement{figure}{H}
+nocite: |
+  @sampsonCrisisCloisterSociological1969, @sampsonNovitiatePeriodChange1968
 ---
 
 ```{r setup, message=FALSE, warning=FALSE, include=FALSE}
 library(network)
 library(sna)
 library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
 library(igraph) # for converting adjacency matrix to network object and calculating weighted indegree
 library(stargazer) # for getting nice regression tables
 library(scales) # for getting alpha-function for edge color
@@ -30,6 +33,41 @@ setwd("~/Documents/GitHub/MonasteryNetwork")
 
 ```
 
+\listoftables
+
+\listoffigures
+
+` `   
+` ` 
+` `   
+` `   
+` ` 
+` `   
+` `   
+` ` 
+` `   
+
+
+
+# Introduction
+Towards the end of his one-year ethnographic study of the social relationships in "an isolated contemporary American monastery" [@breigerAlgorithmClusteringRelational1975, p. 372], Samuel F. Sampson observed what turned into a major dispute that ended in the expulsion and voluntary departure of several of the novices. [see @UCINETIVDatasets] While Sampson's dissertation on this study initially remained unpublished, the network he collected in 1969 nevertheless quickly developed into a classic for researchers in social network analysis to showcase new methods and approaches and continues to spark renewed interest in the quantitative description of how the conflict among the novices unfolded.
+
+While the conflict in this monastery took place more than half a century ago, the words of Breiger, who was the first to influentially use Sampson's data, still hold true in that Sampson's data is "of special interest for what light it may shed on the structure of a social group about to disintegrate for internal reasons" [@breigerAlgorithmClusteringRelational1975, p. 372]. Similar research interests are being brought forward today, e.g. when analyzing the impact of filter bubbles on social network polarization [see @chitraAnalyzingImpactFilter2020] or when researching affective polarization more generally and what effect it has on public opinion [see @druckmanAffectivePolarizationLocal2021].
+
+This is the direction in which this short essay will analyze Sampsons data as well. In a first part, it will ask the following question:
+
+_Inhowfar does the emerging conflict in the monastery reflect in its network of social relationships?_
+
+<!-- This will be relevant insofar as... -->
+
+Secondly, the essay will ask the following question:
+
+_Does the novices' attendance in the preparatory minor seminary "Cloisterville" reduce the negative sentiment received from other novices?_
+
+<!-- This will be relevant insofar as... -->
+
+<!-- I will proceed in the following way ... -->
+
 ```{r data, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Load in the data
 sampson.paj <- read.paj("Sampson.paj")
@@ -37,6 +75,30 @@ sampson.paj <- read.paj("Sampson.paj")
 sampson.dat <- read.dl("sampson.dat")
 
 ```
+
+# Literature Review
+As previously mentioned, Breiger was one of the first to use Sampson's data. He connects the dispute that erupted in the new england monastery [@denooyPajekDataSampson2004] to "turbulence [that] was emerging inside American Catholocism in the late 1960's" [@breigerAlgorithmClusteringRelational1975, p. 372], elements of which contributed to the dispute that Sampson observed while resident as an experimenter on vision in the cloister [@UCINETIVDatasets].
+
+While Sampsons work initially carried the title "A Novitiate in a Period of Change: An Experimental and Case Study of Social Relationships" (1968) and is sometimes cited as such [@denooyPajekDataSampson2004], for the final thesis the more memorable title "Crisis in a Cloister: A Sociological Analysis of Social Relationships and Change in a Novitiate" (1969) was chosen. Under this name, the dissertation was finally published by Ablex Publishing Corporation in 1978, although today no library seems to have a copy of the work available.[^1]
+
+[^1]: According to Worldcat: https://www.worldcat.org/title/crisis-in-the-cloister-a-sociological-analysis-of-social-relationships-and-change-in-a-novitiate/oclc/4004532&referer=brief_results
+
+Sampson's data, as it will be used in the following analysis, can be split into two different sets. In the first set, "the novices were asked for a first, second, and third choice" of "whom they liked most" [@denooyPajekDataSampson2004]. This data was "gathered at three times" [@UCINETIVDatasets].
+
+For the second set, Sampson asked the novices to identify their first, second and third choice for "esteem [...] and disesteem [...], liking  [...] and disliking [...], positive influence  [...] and negative influence [...] , praise  [...] and blame [...]" [@UCINETIVDatasets].
+
+Additionally, Sampson recorded several node-level attributes, such as whether the novices attended the minor seminary, whether they were expulsed, left immediately, left eventually or stayed in the cloister, and to which group in Sampson's manual ethnographic clustering they belonged. Of these attributes, the former two will be used in the following analysis.
+
+# Method
+To answer the first question that explores how the emerging conflict in the monastery reflects in the network of liking-relationships among the novices, a comparative network visualisation will be employed, as well as a - perhaps unconventional but intuitive - approach to quantify this effect of the conflict on the network.
+
+To answer the second question regarding the influence of an attendance in the preparatory minor seminary "Cloisterville" on the negative sentiment received from other novices a regression analysis will be run, using node-level indegree-centrality in the different negative sentiment networks as the outcome variable and attendance to the minor seminary as the explanatory variable. Additionally, the effect will be controlled for group membership of the respective novice.
+
+# Part 1 - Forming of Two Groups
+## Analysis
+As we can see in Figure 1, the networks used in this part of the analysis consist of 18 nodes, representing the 18 novices in the cloister. The nodes are labelled with the names of the novices as used in the study by Sampson. As described earlier, in these networks Sampson recorded the novices' answers to the prompt "List in order those three brothers whom you liked the most." [compare @breigerAlgorithmClusteringRelational1975, p. 372]. At the first time point, these relations are represented in directed 55 edges, at the second in 57 directed edges, and at the third in 56 directed edges. The differences in number occur as "some subjects offered tied ranks" [@UCINETIVDatasets].
+
+In the network visualisation, edges have been weighted according to their rank, where the first choice is represented by the thickest edge and nodes have additionally been colored with red showing that a member has been expulsed, orange, that a member has left immediately, parchment white that a member has left eventually and green, that a member stayed.
 
 ```{r nets, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Extract individual adjacency matrices
@@ -49,13 +111,27 @@ SAMPNIN <- sampson.dat[1:18,1:18,8]
 SAMPNPR <- sampson.dat[1:18,1:18,10]
 
 # Get the data into an igraph network object
-SAMPLK1_igraph <- graph.adjacency(as.matrix(SAMPLK1), mode = "directed", weighted = TRUE)
-SAMPLK2_igraph <- graph.adjacency(as.matrix(SAMPLK2), mode = "directed", weighted = TRUE)
-SAMPLK3_igraph <- graph.adjacency(as.matrix(SAMPLK3), mode = "directed", weighted = TRUE)
-SAMPDLK_igraph <- graph.adjacency(as.matrix(SAMPDLK), mode = "directed", weighted = TRUE)
-SAMPDES_igraph <- graph.adjacency(as.matrix(SAMPDES), mode = "directed", weighted = TRUE)
-SAMPNIN_igraph <- graph.adjacency(as.matrix(SAMPNIN), mode = "directed", weighted = TRUE)
-SAMPNPR_igraph <- graph.adjacency(as.matrix(SAMPNPR), mode = "directed", weighted = TRUE)
+SAMPLK1_igraph <- graph.adjacency(as.matrix(SAMPLK1), 
+                                  mode = "directed", 
+                                  weighted = TRUE)
+SAMPLK2_igraph <- graph.adjacency(as.matrix(SAMPLK2), 
+                                  mode = "directed", 
+                                  weighted = TRUE)
+SAMPLK3_igraph <- graph.adjacency(as.matrix(SAMPLK3), 
+                                  mode = "directed", 
+                                  weighted = TRUE)
+SAMPDLK_igraph <- graph.adjacency(as.matrix(SAMPDLK), 
+                                  mode = "directed", 
+                                  weighted = TRUE)
+SAMPDES_igraph <- graph.adjacency(as.matrix(SAMPDES), 
+                                  mode = "directed", 
+                                  weighted = TRUE)
+SAMPNIN_igraph <- graph.adjacency(as.matrix(SAMPNIN), 
+                                  mode = "directed",
+                                  weighted = TRUE)
+SAMPNPR_igraph <- graph.adjacency(as.matrix(SAMPNPR), 
+                                  mode = "directed", 
+                                  weighted = TRUE)
 
 # Convert to network object
 SAMPLK1_net <- asNetwork(SAMPLK1_igraph)
@@ -66,9 +142,10 @@ SAMPDES_net <- asNetwork(SAMPDES_igraph)
 SAMPNIN_net <- asNetwork(SAMPNIN_igraph)
 SAMPNPR_net <- asNetwork(SAMPNPR_igraph)
 
+SAMPNPR_net %v% "vertex.names"
+
 ```
 
-# Part 1
 ```{r attr, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Include vertex attributes from description
 
@@ -119,9 +196,9 @@ like_coords <- gplot(SAMPLK3_net)
 
 ```
 
-```{r like_viz, echo = FALSE, message = FALSE, warning = FALSE, include = TRUE, fig.height=12, fig.width=5, appendix = TRUE}
+```{r like_viz, echo = FALSE, message = FALSE, warning = FALSE, include = TRUE, fig.height=12, fig.width=12, fig.cap = "\"Liking\"-network at different Time Points", appendix = TRUE}
 # Visualise the networks
-par(mfrow = c(3,1))
+par(mfrow = c(2,2), oma = c(0,0,0,0), mar = c(0,0,0.8,0))
 
 gplot(SAMPLK1_net,
       coord = like_coords,
@@ -134,7 +211,8 @@ gplot(SAMPLK1_net,
       vertex.col = leave_col,
       edge.col = alpha("gray50", 0.5),
       edge.lwd = (SAMPLK1_net %e% "weight")*1.5,
-      main = "Liking at Time Point 1")
+      main = "Liking at Time Point 1",
+      pad = 1)
 
 gplot(SAMPLK2_net,
       coord = like_coords,
@@ -147,7 +225,8 @@ gplot(SAMPLK2_net,
       vertex.col = leave_col,
       edge.col = alpha("gray50", 0.5),
       edge.lwd = (SAMPLK2_net %e% "weight")*1.5,
-      main = "Liking Time Point 2")
+      main = "Liking Time Point 2",
+      pad = 1)
 
 gplot(SAMPLK3_net,
       coord = like_coords,
@@ -160,23 +239,174 @@ gplot(SAMPLK3_net,
       vertex.col = leave_col,
       edge.col = alpha("gray50", 0.5),
       edge.lwd = (SAMPLK3_net %e% "weight")*1.5,
-      main = "Liking Time Point 3")
+      main = "Liking Time Point 3",
+      pad = 1)
 
 ```
 
-Now, did the groups get more cohesive?
+From a first visual assessment we can see how at time point 1 the conflict does not seem to have had an influence on the network. No particular groups can be identified, with edges stretching the entire network. However, already at time point two and more clearly even at time point three, we can see that there are less and less edges that bridge the gap between members who we know ended up staying on the one hand and members who we know left immediately or eventually on the other hand - and those edges that do are only second or third rank nominations. Thus, at time point 3 it seems as though the conflict shows in the network in terms of two groups having formed.
 
-- Graph-level centrality for each of the two subgraphs
+However, as this is only a preliminary, visual assessment, in the following we will make an attempt at quantifying the separation of the two groups. Based on said visual assessment, we are splitting the network into two groups, with Albert, Amand, Ambrose, Bonaventure, Boniface, Basil, Elias, Mark, Ramuald, Simplicius and Victor in group 0 and Berthold, Gregory, Hugh, John Bosco, Louis, Peter and Winfried in group 1.
 
-# Part 2
+Now, the graph below depicts how much a novice is liked by members of group 0 vs by members of group 1. For this, we quantified "how much a novice is liked" by calculating the weighted indegree in the "liking"-network (both by members of group 0 and group 1). We used the _weighted_ indegree, to account for different rankings of the novices, where rank 1 is weighted as 3 and rank 3 is weighted as 1. Most importantly however, the plot shows the difference of that feat between time point 1 and time point 3. Here, the origin of each arrow depicts the weighted indegree for all of the novices at time point 1, and the head of each arrow depicts the weighted indegree for all of the novices at time point 3. 
 
 ```{r groups, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
-# Split nodes into these two groups
+# Get df of group membership
+
+# Split nodes into the above two groups
 # 1 - group that remained, 0 - group that left
 group_value <- c(0,0,0,1,1,1,0,1,1,1,1,0,0,0,0,0,0,0)
 
+group_df <- as.data.frame(cbind(SAMPLK1_net %v% "vertex.names", group_value))
+
+colnames(group_df) <- c("names", "group_membership")
+
 ```
 
+```{r like_centrality, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
+# Now get df of weighted edges for LK1 and LK3
+
+# Get weighted edgelist
+LK1_edges_df <- cbind(get.edgelist(SAMPLK1_igraph), E(SAMPLK1_igraph)$weight)
+
+LK1_edges_df <- as.data.frame(LK1_edges_df)
+
+colnames(LK1_edges_df) <- c("from", "to", "weight")
+
+LK1_edges_df$weight <- as.numeric(LK1_edges_df$weight)
+
+LK3_edges_df <- cbind(get.edgelist(SAMPLK3_igraph), E(SAMPLK3_igraph)$weight)
+
+LK3_edges_df <- as.data.frame(LK3_edges_df)
+
+colnames(LK3_edges_df) <- c("from", "to", "weight")
+
+LK3_edges_df$weight <- as.numeric(LK3_edges_df$weight)
+
+# Now join Group membership on edges, 
+# calculate indegree by timepoint and from group
+
+LK1_df <- merge(group_df, LK1_edges_df, by.x = "names", by.y = "from")
+
+LK1_df_group0 <- LK1_df %>% 
+  filter(group_membership == 0) %>% 
+  group_by(to) %>% 
+  summarise(LK1_group0 = sum(weight))
+
+LK1_df_group1 <- LK1_df %>% 
+  filter(group_membership == 1) %>% 
+  group_by(to) %>% 
+  summarise(LK1_group1 = sum(weight))
+
+LK1_df <- full_join(LK1_df_group0, LK1_df_group1)
+
+LK1_df <- LK1_df %>% 
+  gather(key = "timepoint", value = "indeg", LK1_group0:LK1_group1)
+
+LK1_df <- LK1_df %>% 
+  separate(timepoint, sep = "_", c("timepoint", "group"))
+
+LK3_df <- merge(group_df, LK3_edges_df, by.x = "names", by.y = "from")
+
+LK3_df_group0 <- LK3_df %>% 
+  filter(group_membership == 0) %>% 
+  group_by(to) %>% 
+  summarise(LK3_group0 = sum(weight))
+
+LK3_df_group1 <- LK3_df %>% 
+  filter(group_membership == 1) %>% 
+  group_by(to) %>% 
+  summarise(LK3_group1 = sum(weight))
+
+LK3_df <- full_join(LK3_df_group0, LK3_df_group1)
+
+LK3_df <- LK3_df %>% 
+  gather(key = "timepoint", value = "indeg", LK3_group0:LK3_group1)
+
+LK3_df <- LK3_df %>% 
+  separate(timepoint, sep = "_", c("timepoint", "group"))
+
+LK_df <- rbind(LK1_df, LK3_df)
+
+LK_df[is.na(LK_df)] <- 0
+
+LK_df <- LK_df %>% 
+  spread(key = group, value = indeg) %>% 
+  arrange(timepoint)
+
+LK_df <- merge(LK_df, group_df, by.x = "to", by.y = "names")
+
+```
+
+```{r centralisation_viz, echo = FALSE, message = FALSE, warning = FALSE, include = TRUE, fig.height=5, fig.width=5, fig.cap = "Group Centralisation", appendix = TRUE}
+group_df$offset <- runif(18, 0, 3)
+
+LK_df_plot <- merge(LK_df, 
+                    group_df[,c("names", "offset")], 
+                    by.x = "to", 
+                    by.y = "names") %>% 
+  arrange(timepoint) %>% 
+  rename(Group = group_membership)
+
+LK_df_plot$group0 <- LK_df_plot$group0 + LK_df_plot$offset
+LK_df_plot$group1 <- LK_df_plot$group1 + LK_df_plot$offset
+
+ggplot(LK_df_plot, aes(x = group0, y = group1)) +
+  theme_light() +
+  theme(legend.position = c(0.8, 0.8)) +
+  geom_path(aes(group = to, 
+                color = Group), 
+            arrow = arrow(type = "closed", length=unit(0.1, "inches"))) +
+  geom_text_repel(data = subset(LK_df_plot, 
+                                timepoint == "LK1" & 
+                                  Group == 0 & 
+                                  to != "Gregory"), 
+                  aes(x = group0, y = group1, label = to), 
+                  min.segment.length = 0, 
+                  alpha = 0.5, 
+                  nudge_x = 1, 
+                  nudge_y = -0.25,
+                  size = 2.5) +
+  geom_text_repel(data = subset(LK_df_plot, 
+                                timepoint == "LK1" & 
+                                  Group == 1 & 
+                                  to != "Gregory"), 
+                  aes(x = group0, y = group1, label = to), 
+                  min.segment.length = 0, 
+                  alpha = 0.5, 
+                  nudge_x = -1.5, 
+                  nudge_y = 0.5,
+                  size = 2.5) +
+  xlim(c(-2,20)) +
+  ylim(c(-2,15)) +
+  geom_abline(linetype = "dashed", alpha = 0.5) +
+  xlab("Weighted Indegree by Group 0") +
+  ylab("Weighted Indegree by Group 1")
+  #labs(title = "Centralisation Among the Two Groups") +
+
+
+```
+
+To aid interpretation, a diagonal in the graph also demarks where the novices would have the same weighted indegree by members of the two groups, meaning where they would be equally liked by both of the groups. This is the case e.g. for Albert at time point 1 and for Mark at time point 3. Interestingly, and in accordance with this finding, Sampson also found that Mark was an "'interstitial' member of the monastery, implying that his structural position was ambiguous" [@breigerAlgorithmClusteringRelational1975, p. 376].
+
+Now, when an arrow points away from the diagonal, the novice was liked more equally by members of the two groups at time point 1 than at time point 3, meaning the novice then was relatively more liked by one of the two groups. And if members of the two groups begin to like members of their respective group more than members of the other group, this can be interpreted as a centralization among the groups.
+
+Note that the arrows have been jittered in their position to improve readability, however, their direction relative to the diagonal was preserved, so that the interpretation still holds. Note also, that Gregory was excluded from this analysis, as he does not have any indegrees at time point 3 and thus his arrow would have no direction.
+
+## Results
+As we can see, already at time point 1 the novices were liked more by members of the group that they then ended up in at time point 3 (with the exception of Albert who was liked equally by both groups but was assigned to group 0 by me, the group that liked him more at time point 3). 
+
+However more importantly, we can see that of the members of group 0, the arrows of Albert, Amand, Ambrose, Bonaventure, Boniface, Basil, Elias, and Simplicius are pointing away from the diagonal, whereas only the arrows of Mark, Ramuald, and Victor are pointing towards the diagonal. This means the majority of members of group 0 have begun to be liked more by members of their own group than by members of the other group - meaning an increased centralisation among this group. This feat is even more striking when looking at group 1, where all arrows, of Berthold, Hugh, John Bosco, Louis, Peter and Winfried are pointing away from the diagonal, also meaning an increased centralisation among this group.
+
+Through this comparative network analysis we can conclude that the emerging conflict in the monastery reflects in the network of liking-relationships among the novices in terms of two groups forming, that have also become more centralised over the course of successive observations.
+
+# Part 2 - Effect of the Minor Seminary
+After showing that indeed, the dispute among the members of the cloister reflects in their social network, we are interested in the covariates of this dispute. Did those novices who had attended the preparatory minor seminary have a mitigating effect on the dispute?
+
+## Analysis
+To operationalize "having a mitigating effect on the dispute" we are assuming that those novices who did so would receive less negative sentiment in terms of "dislike", "disesteem", "negative influence" and "blame" by the other novices after the breakup occured. To quantify these, we again calculate the weighted indegree for each of the novices in each of the specified networks.
+
+We can see the attribution of the respective sentiments in the following graph. Edges are weighted by rank, with the thickest corresponding to first rank. Node color corresponds to the attendance to the minor seminary with white meaning "did attend" and grey the opposite. Node sizes correspond to the respective weighted indegree.
 
 ```{r dislike_cords, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Get a good-looking layout
@@ -184,16 +414,28 @@ dislike_coords <- gplot(SAMPNPR_net)
 
 ```
 
-```{r centrality, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
+```{r dislike_centrality, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Get weighted indegrees
-DLK_in <- strength(SAMPDLK_igraph, mode = "in", loops = TRUE, weights = E(SAMPDLK_igraph)$weight)
-DES_in <- strength(SAMPDES_igraph, mode = "in", loops = TRUE, weights = E(SAMPDES_igraph)$weight)
-NIN_in <- strength(SAMPNIN_igraph, mode = "in", loops = TRUE, weights = E(SAMPNIN_igraph)$weight)
-NPR_in <- strength(SAMPNPR_igraph, mode = "in", loops = TRUE, weights = E(SAMPNPR_igraph)$weight)
+DLK_in <- strength(SAMPDLK_igraph, 
+                   mode = "in", 
+                   loops = TRUE, 
+                   weights = E(SAMPDLK_igraph)$weight)
+DES_in <- strength(SAMPDES_igraph, 
+                   mode = "in", 
+                   loops = TRUE, 
+                   weights = E(SAMPDES_igraph)$weight)
+NIN_in <- strength(SAMPNIN_igraph, 
+                   mode = "in", 
+                   loops = TRUE, 
+                   weights = E(SAMPNIN_igraph)$weight)
+NPR_in <- strength(SAMPNPR_igraph, 
+                   mode = "in", 
+                   loops = TRUE, 
+                   weights = E(SAMPNPR_igraph)$weight)
 
 ```
 
-```{r dislike_viz, echo = FALSE, message = FALSE, warning = FALSE, include = TRUE, fig.height=12, fig.width=12, appendix = TRUE}
+```{r dislike_viz, echo = FALSE, message = FALSE, warning = FALSE, include = TRUE, fig.height=12, fig.width=12, fig.cap="Negative Sentiment-networks", appendix = TRUE}
 # Visualise negative feeling networks
 par(mfrow = c(2,2))
 
@@ -255,7 +497,11 @@ gplot(SAMPNPR_net,
 
 ```
 
-Now on to the regression analysis. We try to find out, whether attending the cloisterville seminar reduced the weighted in-degree in the negative sentiment networks. We have to correct for group membership, because it is likely that the two groups extended more negative feelings towards each other than among themselves. Together with the unequal sizes of these groups, this is likely to lead to a bias in more equal sentiment per actor extended towards the smaller of the two groups.
+Note that e.g. Bonaventure attended the minor seminary and was nominated by none of the other novices for any of the negative sentiments. At the same time however, Peter did attend the minor seminary and is consistently among the novices receiving the most negative sentiment. Thus, to get more conclusive results, we are using a linear regression with the weighted indegree in the different negative sentiment networks as the outcome variable and attendance to the minor seminary "Cloisterville" as the explanatory variable.
+
+We also have to correct for group membership, because it is likely that the two groups extended more negative feelings towards each other than among themselves and together with the unequal sizes of these groups, this is likely to lead to a bias in more equal sentiment per actor extended towards the smaller of the two groups.
+
+## Results
 
 ```{r reg, echo = FALSE, message = FALSE, warning = FALSE, include = FALSE, appendix = TRUE}
 # Calculate centrality measures
@@ -277,12 +523,35 @@ stargazer(lm_DLK, lm_DES, lm_NIN, lm_NPR,
           type="latex",
           covariate.labels=c("Attendance Cloisterville", "Group membership"),
           dep.var.labels = c("Dislike,", "Disesteem,", "Neg. Influence,", "Blame"),
-          title = "Results",
-          column.sep.width = "10pt")
-
-# shows coefficients and standard errors, none of the results are significant at the p<0.1-level
+          title = "Regression Results",
+          column.sep.width = "10pt",
+          header = FALSE)
 
 ```
+
+As we can see from the table above, in none of the negative sentiment networks there is a relationship between attendance to the preparatory seminary and the weighted indegree at at least the p<0.1-level. This suggest no influence of attending "Cloisterville" on how mitigating a novice was perceived to be.
+
+# Conclusion
+While this analysis was able to show how over the course of the dispute in the monastery two groups have formed and centralised over time and how this shows in the network of relationships on the one hand, and that attending the preparatory seminary "Cloisterville" did not have an influence on how mitigating a novice was perceived to be on the other, it is difficult to give a more insightful interpretation of the results without access to the original study by Sampson.
+
+Nevertheless, this analysis was able to make a contribution by suggesting a new way to visualise and test dichotomous centralisation processes in social network analysis.
+
+` `   
+` ` 
+` `   
+` `   
+` ` 
+` `   
+` `   
+` ` 
+` `  
+
+# Bibliography
+<div id="refs"></div>
+
+` `   
+` ` 
+` `   
 
 # Code
 ```{r, ref.label=knitr::all_labels(appendix == TRUE),echo = TRUE, eval=FALSE}
